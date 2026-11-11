@@ -1,0 +1,9 @@
+# Vercel serves the game as a plain static site: index.html, css/, js/, data/.
+# Leaving out package.json stops Vercel from trying to install or build anything.
+node_modules
+tools
+tests
+package.json
+package-lock.json
+start.bat
+README.md

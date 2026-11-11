@@ -1,0 +1,64 @@
+// Plays a full regular season headlessly and compares league totals with real MLB.
+import { readFile } from 'node:fs/promises';
+import { newCareer, simDay, standings, T } from '../js/engine/league.js';
+
+const data = JSON.parse(await readFile(new URL('../data/league.json', import.meta.url), 'utf8'));
+const games = +(process.argv[2] || 162), seed = +(process.argv[3] || 12345);
+const t0 = Date.now();
+const L = newCareer(data, { userTid: 147, games, seed });
+L.opts.autoRoster = true;
+while (L.day < L.sched.length) simDay(L);
+const ms = Date.now() - t0;
+
+const s = {}, ps = {};
+for (const p of L.players) {
+  for (const k in p.st.b) s[k] = (s[k] || 0) + p.st.b[k];
+  if (p.st.p) for (const k in p.st.p) ps[k] = (ps[k] || 0) + p.st.p[k];
+}
+const G = L.teams.reduce((a, t) => a + t.w, 0);
+const f = (x, d = 3) => x.toFixed(d);
+const row = (n, sim, real) => console.log(n.padEnd(16), String(sim).padStart(8), String(real).padStart(8));
+console.log(`season sim: ${ms} ms, ${G} games, ${games} per team`);
+console.log('stat'.padEnd(16), 'sim'.padStart(8), 'MLB 2026'.padStart(8));
+row('R/G (team)', f(s.R / G / 2, 2), '4.48');
+row('AVG', f(s.H / s.AB), '.244');
+row('OBP', f((s.H + s.BB + s.HBP) / (s.AB + s.BB + s.HBP + s.SF)), '.315');
+row('SLG', f((s.H + s.D + 2 * s.T + 3 * s.HR) / s.AB), '.397');
+row('K%', f(s.K / s.PA), '.221');
+row('BB%', f(s.BB / s.PA), '.089');
+row('HR/G', f(s.HR / G / 2, 2), '1.15');
+row('2B/G', f(s.D / G / 2, 2), '1.54');
+row('3B/G', f(s.T / G / 2, 2), '0.14');
+row('SB/G', f(s.SB / G / 2, 2), '0.68');
+row('CS/G', f(s.CS / G / 2, 2), '0.20');
+row('GDP/G', f(s.GDP / G / 2, 2), '0.65');
+row('SF/G', f(s.SF / G / 2, 2), '0.27');
+row('BABIP', f((s.H - s.HR) / (s.AB - s.K - s.HR + s.SF)), '.290');
+row('PA/G', f(s.PA / G / 2, 1), '37.8');
+row('pitches/PA', f(ps.NP / ps.BF, 2), '3.88');
+row('ERA', f(ps.ER / ps.O * 27, 2), '4.10');
+row('IP/GS', f(L.players.filter(p => p.st.p?.GS > 10).reduce((a, p) => a + p.st.p.O / 3 / p.st.p.G, 0) / L.players.filter(p => p.st.p?.GS > 10).length, 2), '5.2');
+row('saves/G', f(ps.SV / G, 2), '0.50');
+row('SP wins share', f(L.players.filter(p => p.st.p?.GS > 5).reduce((a, p) => a + p.st.p.W, 0) / G, 2), '0.62');
+row('NP per start', f(L.players.filter(p => p.role === 'SP' && p.st.p?.GS > 20).reduce((a, p) => a + p.st.p.NP / p.st.p.G, 0) / Math.max(1, L.players.filter(p => p.role === 'SP' && p.st.p?.GS > 20).length), 1), '87');
+const st = L.teams.map(t => t.w).sort((a, b) => b - a);
+console.log('wins: best', st[0], 'worst', st.at(-1), 'median', st[15]);
+for (const [k, v] of Object.entries(standings(L))) console.log(k.padEnd(11), v.map(t => `${t.abbr} ${t.w}-${t.l}`).join('  '));
+const qual = L.players.filter(p => p.st.b.PA >= 3.1 * games);
+const avg = p => p.st.b.H / p.st.b.AB;
+const top = (arr, fn, n = 5, d = 0) => arr.sort((a, b) => fn(b) - fn(a)).slice(0, n).map(p => `${p.last} ${d ? fn(p).toFixed(d) : fn(p)}`).join(', ');
+console.log('AVG:', top(qual, avg, 5, 3));
+console.log('HR :', top([...L.players], p => p.st.b.HR));
+console.log('RBI:', top([...L.players], p => p.st.b.RBI));
+console.log('SB :', top([...L.players], p => p.st.b.SB));
+const qp = L.players.filter(p => p.st.p && p.st.p.O >= 3 * games);
+console.log('ERA:', qp.sort((a, b) => a.st.p.ER / a.st.p.O - b.st.p.ER / b.st.p.O).slice(0, 5).map(p => `${p.last} ${(p.st.p.ER / p.st.p.O * 27).toFixed(2)}`).join(', '));
+console.log('W  :', top(L.players.filter(p => p.st.p), p => p.st.p.W));
+console.log('K  :', top(L.players.filter(p => p.st.p), p => p.st.p.K));
+console.log('SV :', top(L.players.filter(p => p.st.p), p => p.st.p.SV));
+console.log('IP :', top(L.players.filter(p => p.st.p), p => Math.round(p.st.p.O / 3)));
+console.log('injured now:', L.players.filter(p => p.inj && p.lvl === 'MLB').length, ' IL:', L.players.filter(p => p.il).length);
+const u = T(L, 147);
+console.log('NYY gate $M', u.gate.toFixed(1), 'att/g', Math.round(u.att / (games / 2)), 'media', u.rev.toFixed(1));
+const ma = L.players.filter(p => p.sm?.b?.PA > 200).length;
+console.log('AAA hitters with 200+ PA:', ma, ' AAA records sample:', L.teams.slice(0, 4).map(t => `${t.abbr} ${t.mw}-${t.ml}`).join(' '));
