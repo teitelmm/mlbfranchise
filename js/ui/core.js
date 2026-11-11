@@ -23,7 +23,9 @@ export function avatarSvg(p, c1 = '#17402f', c2 = '#fff') {
 }
 export function faceUrl(p) {
   const t = p.tid >= 0 && S.L ? T(S.L, p.tid) : null;
-  if (p.real) return `https://img.mlbstatic.com/mlb-photos/image/upload/d_people:generic:headshot:67:current.png/w_213,q_auto:best/v1/people/${p.id}/headshot/67/current`;
+  // copied into img/ by tools/fetch-faces.mjs, which lists them in data/faces.json;
+  // players MLB has no photo for get the drawn avatar
+  if (p.real && (!S.faces || S.faces.has(p.id))) return `img/faces/${p.id}.webp`;
   return avatarSvg(p, t?.c1, t?.c2 === '#27251F' ? '#fff' : t?.c2);
 }
 export function face(p, size = 34) {
@@ -33,7 +35,7 @@ export function face(p, size = 34) {
 export function logo(tid, size = 24) {
   const t = S.L ? T(S.L, tid) : S.data.teams.find(x => x.id === tid);
   if (!t) return '';
-  return `<span class="tlogo" style="width:${size}px;height:${size}px" title="${esc(t.name)}"><img width="${size}" height="${size}" style="width:${size}px;height:${size}px;max-width:100%;object-fit:contain" src="https://www.mlbstatic.com/team-logos/${t.id}.svg" alt="${esc(t.abbr)}" onerror="this.outerHTML='<span class=&quot;abbr&quot; style=&quot;background:${t.c1};font-size:${Math.max(9, size * 0.36)}px&quot;>${t.abbr}</span>'"></span>`;
+  return `<span class="tlogo" style="width:${size}px;height:${size}px" title="${esc(t.name)}"><img width="${size}" height="${size}" style="width:${size}px;height:${size}px;max-width:100%;object-fit:contain" src="img/logos/${t.id}.svg" alt="${esc(t.abbr)}" onerror="this.outerHTML='<span class=&quot;abbr&quot; style=&quot;background:${t.c1};font-size:${Math.max(9, size * 0.36)}px&quot;>${t.abbr}</span>'"></span>`;
 }
 export const ovrCls = n => n >= 88 ? 's' : n >= 80 ? 'a' : n >= 73 ? 'b' : n >= 66 ? 'c' : n >= 58 ? 'd' : 'f';
 export const ovr = n => `<span class="ovr ${ovrCls(n)}">${Math.round(n)}</span>`;

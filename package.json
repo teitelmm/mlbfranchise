@@ -1,1 +1,1 @@
-{"name":"ballclub","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node tools/serve.mjs","data":"node tools/fetch-raw.mjs && node tools/build-league.mjs","test":"node tests/run.mjs"},"devDependencies":{"jsdom":"^31.0.0","puppeteer-core":"^25.17.0"}}
+{"name":"ballclub","version":"0.1.0","private":true,"type":"module","scripts":{"start":"node tools/serve.mjs","data":"node tools/fetch-raw.mjs && node tools/build-league.mjs && node tools/fetch-faces.mjs","test":"node tests/run.mjs"},"devDependencies":{"jsdom":"^31.0.0","puppeteer-core":"^25.17.0"}}

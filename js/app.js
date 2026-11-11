@@ -146,6 +146,8 @@ views.jobs = () => {
 (async function boot() {
   try {
     S.data = await (await fetch('data/league.json')).json();
+    // ids with a photo in img/faces; without the list every real player still tries one
+    try { S.faces = new Set(await (await fetch('data/faces.json')).json()); } catch { S.faces = null; }
   } catch (e) {
     app.innerHTML = `<div class="boot">Could not load the league data.<br><small>Open the game through the start file (start.bat) so it runs from a local web address, not by double-clicking index.html.</small></div>`;
     return;
